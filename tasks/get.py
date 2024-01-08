@@ -58,9 +58,8 @@ async def get_task(task_number: Optional[int] = None, header: Optional[str] = No
         result = await session.execute(query)
         return result.first()
     except NoResultFound:
-        return None
+        return []
     except Exception as e:
-        raise e
         raise HTTPException(status_code=500, detail="None")
 
 
@@ -72,5 +71,4 @@ async def get_subtasks(task_number: int, user: User = Depends(current_user),
         result = await session.execute(query)
         return list(x[0] for x in result.all())
     except Exception as e:
-        print(e)
         raise HTTPException(status_code=500, detail="None")

@@ -8,7 +8,7 @@ from tasks.schemas import TaskRead, TaskCreate, SubtaskCreate
 from auth.auth import fastapi_users
 from models import User, Task, Subtasks
 from datetime import datetime
-from sqlalchemy.exc import NoResultFound
+from sqlalchemy.exc import NoResultFound, IntegrityError
 
 current_user = fastapi_users.current_user()
 router = APIRouter(
@@ -25,7 +25,11 @@ async def add_task(new_task: TaskCreate, user: User = Depends(current_user), ses
         await session.execute(stmt)
         await session.commit()
         return {"status": "success", "detail": "None"}
-    except:
+    except NoResultFound:
+        raise HTTPException(status_code=422, detail="there is no task with such number")
+    except IntegrityError:
+        raise HTTPException(status_code=422, detail="there is no user with this id")
+    except Exception as e:
         raise HTTPException(status_code=500, detail="None")
 
 
@@ -36,5 +40,9 @@ async def add_subtask(new_subtask: SubtaskCreate, session: AsyncSession = Depend
         await session.execute(stmt)
         await session.commit()
         return {"status": "success", "detail": "None"}
+    except IntegrityError:
+        raise HTTPException(status_code=422, detail="there is no task with this number")
+    except NoResultFound:
+        raise HTTPException(status_code=422, detail="there is no task with such number")
     except Exception:
         raise HTTPException(status_code=422, detail="task with this number does not exist")
