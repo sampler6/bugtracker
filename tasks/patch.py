@@ -17,8 +17,17 @@ router = APIRouter(
 )
 
 
-def validate_executor(executor_role: Optional[Roles], task_status: Status):
+async def validate_executor(executor_id: int, task_status: Status,
+                      session: AsyncSession = Depends(AsyncSession)):
     """Used for validation executor role + task status fields"""
+
+    if executor_id is not None:
+        query = select(User.__table__.c.role).where(User.__table__.c.id == executor_id)
+        result = await session.execute(query)
+        executor_role: Optional[Roles] = result.one()[0]
+    else:
+        executor_role = None
+
     if task_status == Status.To_do and executor_role is None:
         raise HTTPException(status_code=422, detail="task with status 'In progress' must have the executor'")
     if executor_role == Roles.Manager:
@@ -39,15 +48,8 @@ async def change_task_status(task_number: int, status: StatusNext, executor: int
         result = await session.execute(query)
         task: TaskRead = result.one()
 
-        if executor is not None:
-            query = select(User.__table__.c.role).where(User.__table__.c.id == executor)
-            result = await session.execute(query)
-            executor_role: Optional[Roles] = result.one()[0]
-        else:
-            executor_role = None
-
         if status == StatusNext.Next:
-            validate_executor(executor_role, task.status)
+            await validate_executor(executor, task.status, session)
 
         if status == StatusNext.To_do:
             stmt = update(Task.__mapper__).values(status="To do", executor=executor,
@@ -78,16 +80,12 @@ async def change_task_column(task_number: int, task_field: TaskFields, new_value
     try:
         if task_field in [TaskFields.executor, TaskFields.creator]:
             new_value: int = int(new_value)
+            query = select(Task.__table__.c.status).where(Task.__table__.c.number == task_number)
+            result = await session.execute(query)
+            status: Status = result.one()
 
             if task_field.executor:
-                query = select(Task.__table__.c.status).where(Task.__table__.c.number == task_number)
-                result = await session.execute(query)
-                status: TaskRead = result.one()
-
-                query = select(User.__table__.c.role).where(User.__table__.c.id == new_value)
-                result = await session.execute(query)
-                executor_role: Optional[Roles] = result.one()[0]
-                validate_executor(executor_role, status)
+                await validate_executor(new_value, status)
         elif task_field in [TaskFields.header, TaskFields.description]:
             new_value: str = str(new_value)
         elif task_field in [TaskFields.status]:

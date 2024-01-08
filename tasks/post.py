@@ -9,6 +9,7 @@ from auth.auth import fastapi_users
 from models import User, Task, Subtasks
 from datetime import datetime
 from sqlalchemy.exc import NoResultFound, IntegrityError
+from tasks.patch import validate_executor
 
 current_user = fastapi_users.current_user()
 router = APIRouter(
@@ -21,6 +22,9 @@ async def add_task(new_task: TaskCreate, user: User = Depends(current_user), ses
     try:
         new_task.type = new_task.type.value
         new_task.priority = new_task.priority.value
+
+        await validate_executor(new_task.executor, Status.To_do.value, session)
+
         stmt = insert(Task.__mapper__).values(dict(new_task.model_dump()))
         await session.execute(stmt)
         await session.commit()
@@ -29,7 +33,9 @@ async def add_task(new_task: TaskCreate, user: User = Depends(current_user), ses
         raise HTTPException(status_code=422, detail="there is no task with such number")
     except IntegrityError:
         raise HTTPException(status_code=422, detail="there is no user with this id")
-    except Exception as e:
+    except HTTPException as e:
+        raise e
+    except Exception:
         raise HTTPException(status_code=500, detail="None")
 
 
