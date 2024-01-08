@@ -11,6 +11,7 @@ from datetime import datetime
 from sqlalchemy.exc import NoResultFound, IntegrityError
 from tasks.patch import validate_executor
 
+
 current_user = fastapi_users.current_user()
 router = APIRouter(
     prefix="/post",
@@ -35,7 +36,7 @@ async def add_task(new_task: TaskCreate, user: User = Depends(current_user), ses
         raise HTTPException(status_code=422, detail="there is no user with this id")
     except HTTPException as e:
         raise e
-    except Exception:
+    except Exception as e:
         raise HTTPException(status_code=500, detail="None")
 
 
