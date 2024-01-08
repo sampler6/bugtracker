@@ -54,6 +54,8 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['sub_task'], ['tasks.number'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
+
+    op.execute("CREATE EXTENSION IF NOT EXISTS pg_trgm")
     # ### end Alembic commands ###
 
 
@@ -64,3 +66,4 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_users_email'), table_name='users')
     op.drop_table('users')
     # ### end Alembic commands ###
+
