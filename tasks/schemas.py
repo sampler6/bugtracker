@@ -12,8 +12,8 @@ class TaskCreate(BaseModel):
     priority: Optional[Priority] = None
     header: str
     description: Optional[str] = None
-    executor: Optional[int] = Field(ge=0)
-    creator: int = Field(ge=0)
+    executor: Optional[int] = Field(ge=0, default=1)
+    creator: int = Field(ge=0, default=1)
 
 
 class TaskRead(BaseModel):
@@ -30,6 +30,6 @@ class TaskRead(BaseModel):
 
 
 class SubtaskCreate(BaseModel):
-    main_task: int
-    sub_task: int
+    main_task: int = Field(gt=1, default=1)
+    sub_task: int = Field(gt=1, default=1)
 

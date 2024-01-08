@@ -9,6 +9,7 @@ from auth.schemas import UserRead
 from models import User
 from database import get_async_session
 from enums.enums import Roles
+from sqlalchemy.exc import NoResultFound
 
 
 router = APIRouter(
@@ -22,12 +23,17 @@ current_user = fastapi_users.current_user()
 @router.get("/get_users", response_model=List[UserRead])
 async def get_users(user: User = Depends(current_user),
                       session: AsyncSession = Depends(get_async_session)):
-    if user.role != Roles.Manager:
-        raise HTTPException(status_code=422, detail="you must have role 'manager'")
+    try:
+        if user.role != Roles.Manager:
+            raise HTTPException(status_code=422, detail="you must have role 'manager'")
 
-    query = select(User.__table__.c.id, User.__table__.c.email, User.__table__.c.role)
-    result = await session.execute(query)
-    return result.all()
+        query = select(User.__table__.c.id, User.__table__.c.email, User.__table__.c.role)
+        result = await session.execute(query)
+        return result.all()
+    except NoResultFound:
+        return []
+    except:
+        raise HTTPException(status_code=500, detail="None")
 
 
 @router.get("/get_user/{user_id}", response_model=UserRead)
@@ -52,7 +58,7 @@ async def change_role(user_id: int, new_role: Roles, user: User = Depends(curren
         await session.execute(query)
         await session.commit()
         return {"status": "success", "detail": "None"}
-    except:
+    except NoResultFound:
         return {"status": "error", "detail": "User with id does not exist"}
 
 
@@ -67,5 +73,5 @@ async def change_email(user_id: int, new_email: EmailStr, user: User = Depends(c
         await session.execute(query)
         await session.commit()
         return {"status": "success", "detail": "None"}
-    except:
+    except NoResultFound:
         return {"status": "error", "detail": "User with id does not exist"}
